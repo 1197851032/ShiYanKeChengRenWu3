@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验报告管理系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-light: #eff6ff;
+            --success-color: #22c55e;
+            --error-color: #ef4444;
+            --text-color: #111827;
+            --text-light: #6b7280;
+            --border-color: #e5e7eb;
+            --bg-color: #f8f9fa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', '微软雅黑', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .top-modules {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+            padding: 1.5rem;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .small-card {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .section-title {
+            color: var(--text-color);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            border-left: 4px solid var(--primary-color);
+            padding-left: 0.75rem;
+        }
+
+        .file-upload {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-label:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .file-name {
+            color: var(--text-light);
+            font-size: 0.9rem;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .export-btn {
+            margin-left: 1rem;
+            background-color: #64748b;
+            color: white;
+        }
+
+        .export-btn:hover {
+            background-color: #475569;
+            transform: translateY(-1px);
+        }
+
+        .message {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .message-success {
+            background-color: #ecfdf5;
+            color: #065f46;
+            border-left: 4px solid var(--success-color);
+        }
+
+        .message-error {
+            background-color: #fef2f2;
+            color: #991b1b;
+            border-left: 4px solid var(--error-color);
+        }
+
+        .statistics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1);
+        }
+
+        .statistics-table th {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            padding: 0.875rem 1rem;
+            text-align: left;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .statistics-table td {
+            padding: 0.875rem 1rem;
+            color: var(--text-color);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        .statistics-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .statistics-table tr:hover {
+            background-color: #f8fafc;
+        }
+
+        @media (max-width: 768px) {
+            .top-modules {
+                flex-direction: column;
+            }
+            
+            .small-card {
+                min-width: auto;
+            }
+            
+            .section-title {
+                font-size: 1.125rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-modules">
+            <div class="card small-card">
+                <h3 class="section-title">学生信息导入</h3>
+                <div class="file-upload">
+                    <input type="file" class="file-input" id="studentFile" accept=".xlsx,.csv">
+                    <label for="studentFile" class="file-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                        </svg>
+                        选择文件
+                    </label>
+                    <span class="file-name" id="fileName">未选择文件</span>
+                </div>
+                <button class="btn btn-primary" id="importStudentBtn">导入学生信息</button>
+                <div id="importStudentMsg" class="message"></div>
+            </div>
+
+            <div class="card small-card">
+                <h3 class="section-title">实验报告目录处理</h3>
+                <div class="form-group">
+                    <label class="form-label" style="font-size: 0.875rem;">输入目录路径（示例：D:/实验报告）</label>
+                    <input type="text" class="form-input" id="directoryPath" placeholder="请输入服务器绝对路径" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                </div>
+                <button class="btn btn-primary" id="processDirBtn">处理目录</button>
+                <div id="processDirMsg" class="message"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <h3 class="section-title">学生维度缺交统计</h3>
+                <button class="btn export-btn" id="exportStudentBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    导出Excel
+                </button>
+            </div>
+            <div id="studentStatistics"></div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <h3 class="section-title">实验维度缺交统计</h3>
+                <button class="btn export-btn" id="exportExperimentBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    导出Excel
+                </button>
+            </div>
+            <div id="experimentStatistics"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8081/api/report';
+
+        document.getElementById('studentFile').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || '未选择文件';
+            document.getElementById('fileName').textContent = fileName;
+        });
+
+        document.getElementById('importStudentBtn').addEventListener('click', async () => {
+            const file = document.getElementById('studentFile').files[0];
+            if (!file) {
+                showMessage('importStudentMsg', '请选择文件', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE}/import-students`, { method: 'POST', body: formData });
+                handleResponse(response, 'importStudentMsg', '学生信息导入成功');
+            } catch (error) {
+                showMessage('importStudentMsg', error.message, 'error');
+            }
+        });
+
+        document.getElementById('processDirBtn').addEventListener('click', async () => {
+            const path = document.getElementById('directoryPath').value.trim();
+            if (!path) {
+                showMessage('processDirMsg', '请输入目录路径', 'error');
+                return;
+            }
+
+            const formData = new URLSearchParams();
+            formData.append('path', path);
+
+            try {
+                const response = await fetch(`${API_BASE}/process-directory`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+                const success = await handleResponse(response, 'processDirMsg', '目录处理完成');
+                if (success) loadStatistics();
+            } catch (error) {
+                showMessage('processDirMsg', error.message, 'error');
+            }
+        });
+
+        // 关键修正：调整实验维度统计的列名字段
+        async function loadStatistics() {
+            try {
+                const [studentStats, experimentStats] = await Promise.all([
+                    fetch(`${API_BASE}/student-statistics`).then(res => res.json()),
+                    fetch(`${API_BASE}/experiment-statistics`).then(res => res.json())
+                ]);
+                // 学生维度列名保持与后端字段一致
+                renderStatistics('studentStatistics', studentStats, ['学号', '姓名', '缺交次数', '缺交实验列表']);
+                // 实验维度列名调整为后端实际返回的字段（实验名/缺交人数/缺交列表）
+                renderStatistics('experimentStatistics', experimentStats, ['实验名', '缺交人数', '缺交列表']);
+            } catch (error) {
+                console.error('加载统计失败:', error);
+            }
+        }
+
+        function renderStatistics(containerId, data, columns) {
+            const container = document.getElementById(containerId);
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-light); padding: 1rem;">暂无统计数据</p>';
+                return;
+            }
+
+            const tableHtml = `
+                <table class="statistics-table">
+                    <thead>
+                        <tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(item => `
+                            <tr>${columns.map(col => `
+                                <td>${item[col] || '无'}</td>
+                            `).join('')}</tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            container.innerHTML = tableHtml;
+        }
+
+        async function handleResponse(response, msgId, successText) {
+            if (response.ok) {
+                showMessage(msgId, successText, 'success');
+                return true;
+            }
+            const errorText = await response.text() || '操作失败';
+            showMessage(msgId, errorText, 'error');
+            return false;
+        }
+
+        function showMessage(elementId, text, type) {
+            const msgEl = document.getElementById(elementId);
+            msgEl.textContent = text;
+            msgEl.className = `message message-${type} show`;
+            setTimeout(() => msgEl.className = 'message', 3000);
+        }
+
+        function exportToExcel(containerId, filename) {
+            const container = document.getElementById(containerId);
+            const table = container.querySelector('table');
+            if (!table || table.rows.length === 0) {
+                alert('无数据可导出');
+                return;
+            }
+
+            const workbook = XLSX.utils.table_to_book(table);
+            const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.getElementById('exportStudentBtn').addEventListener('click', () => {
+            exportToExcel('studentStatistics', '学生缺交统计.xlsx');
+        });
+
+        document.getElementById('exportExperimentBtn').addEventListener('click', () => {
+            exportToExcel('experimentStatistics', '实验缺交统计.xlsx');
+        });
+
+        window.onload = loadStatistics;
+    </script>
+</body>
+</html>
+    
